@@ -8,6 +8,8 @@
 
 Essential utilities for building production-ready AI applications with Vercel AI SDK. State management, debugging, structured streaming, intelligent agents, caching, and persistent memory.
 
+Italian Guide: [GUIDA.md](./GUIDA.md)
+
 ## Installation
 
 ### Unified Package (Recommended)
