@@ -7,7 +7,6 @@ let unpdfModule: any;
 async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   if (!unpdfModule) {
     try {
-      // @ts-expect-error - Optional dependency
       unpdfModule = await import("unpdf");
     } catch {
       throw new Error(
@@ -53,7 +52,6 @@ export async function extractWithOCRFallback<T>(
 
     const result = await retryCall(
       async () => {
-        // @ts-expect-error - Optional peer dependency
         const mistral = await import("@ai-sdk/mistral");
         const model = config?.model || "mistral-medium-latest";
         const apiKey = config?.apiKey || process.env.MISTRAL_API_KEY;

@@ -18,7 +18,9 @@ export function createWorkingMemoryTool(memoryConfig: MemoryConfig) {
         .describe("Updated working memory following the template structure"),
     }),
     execute: async ({ content }, options) => {
-      const ctx = getContext(options);
+      const ctx = getContext<{
+        metadata?: { chatId?: string; userId?: string };
+      }>(options);
       const { chatId, userId } = ctx?.metadata || {};
 
       await memoryConfig.provider.updateWorkingMemory({

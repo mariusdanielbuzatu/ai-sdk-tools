@@ -10,7 +10,6 @@ async function getMistralProvider(config?: {
 }) {
   if (!mistralProvider) {
     try {
-      // @ts-expect-error - Optional peer dependency
       const mistral = await import("@ai-sdk/mistral");
       mistralProvider = mistral.mistral;
     } catch {

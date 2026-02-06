@@ -6,7 +6,7 @@ import {
   type MemoryConfig,
 } from "@ai-sdk-tools/memory";
 import {
-  Experimental_Agent as AISDKAgent,
+  ToolLoopAgent as AISDKAgent,
   convertToModelMessages,
   createUIMessageStream,
   createUIMessageStreamResponse,
@@ -71,7 +71,7 @@ export class Agent<
   public readonly lastMessages?: number;
   private readonly memory?: MemoryConfig;
   private readonly model: LanguageModel;
-  private readonly aiAgent: AISDKAgent<Record<string, Tool>>;
+  private readonly aiAgent: AISDKAgent<never, Record<string, Tool>>;
   private readonly handoffAgents: Array<IAgent<any> | ConfiguredHandoff<any>>;
   private readonly configuredTools:
     | Record<string, Tool>
@@ -98,13 +98,13 @@ export class Agent<
     // Store tools config (will be resolved at runtime)
     this.configuredTools = config.tools || {};
 
-    // Create AI SDK Agent with minimal config (system prompt overridden per-request in stream())
+    // Create AI SDK Agent with minimal config (instructions overridden per-request in stream())
     // Extract toolChoice from modelSettings (needs to be a top-level param per AI SDK)
     const { toolChoice, ...otherModelSettings } = config.modelSettings || {};
 
-    this.aiAgent = new AISDKAgent<Record<string, Tool>>({
+    this.aiAgent = new AISDKAgent<never, Record<string, Tool>>({
       model: config.model,
-      system: "", // Will be overridden per-request with resolved instructions
+      instructions: "", // Will be overridden per-request with resolved instructions
       tools: {}, // Will be overridden per-request with resolved tools
       stopWhen: stepCountIs(config.maxTurns || 10),
       temperature: config.temperature,
@@ -1371,7 +1371,6 @@ Good suggestions are:
         system: instructions,
         prompt: conversationContext,
         schema: suggestionsSchema,
-        mode: "json",
       });
 
       const { prompts } = object;
@@ -1489,20 +1488,20 @@ Good suggestions are:
       logger.debug(
         "History disabled or no context - using single message only",
       );
-      return convertToModelMessages([message]);
+      return await convertToModelMessages([message]);
     }
 
     const { chatId } = this.extractMemoryIdentifiers(context);
 
     if (!chatId) {
       logger.warn("Cannot load history: chatId missing from context");
-      return convertToModelMessages([message]);
+      return await convertToModelMessages([message]);
     }
 
     // Check if provider exists
     if (!this.memory.provider) {
       logger.warn("No memory provider configured - using single message only");
-      return convertToModelMessages([message]);
+      return await convertToModelMessages([message]);
     }
 
     try {
@@ -1522,7 +1521,7 @@ Good suggestions are:
         return convertToModelMessages([message]);
       }
 
-      const historyMessages = convertToModelMessages(
+      const historyMessages = await convertToModelMessages(
         stripMetadata(previousMessages),
       );
 
@@ -1532,13 +1531,13 @@ Good suggestions are:
           count: historyMessages.length,
         },
       );
-      return [...historyMessages, ...convertToModelMessages([message])];
+      return [...historyMessages, ...(await convertToModelMessages([message]))];
     } catch (err) {
       logger.error(`Load history failed for chatId=${chatId}`, {
         chatId,
         error: err,
       });
-      return convertToModelMessages([message]);
+      return await convertToModelMessages([message]);
     }
   }
 
