@@ -10,6 +10,31 @@ import { type StoreState, useChatStoreApi } from "./hooks";
 
 export type { UseChatOptions, UseChatHelpers };
 
+function mergeMessages<TMessage extends UIMessage = UIMessage>(
+  base: TMessage[],
+  incoming: TMessage[],
+): TMessage[] {
+  if (base.length == 0) return incoming;
+  if (incoming.length == 0) return base;
+
+  const seen = new Set<string>();
+  for (const msg of base) {
+    const id = (msg as any)?.id;
+    if (typeof id === "string") seen.add(id);
+  }
+
+  const merged = base.slice();
+  for (const msg of incoming) {
+    const id = (msg as any)?.id;
+    if (typeof id !== "string" || !seen.has(id)) {
+      merged.push(msg);
+      if (typeof id === "string") seen.add(id);
+    }
+  }
+
+  return merged;
+}
+
 // Type for a compatible chat store
 export interface CompatibleChatStore<TMessage extends UIMessage = UIMessage> {
   <T>(selector: (state: StoreState<TMessage>) => T): T;
@@ -93,29 +118,28 @@ export function useChat<TMessage extends UIMessage = UIMessage>(
     }
   }, []);
 
-  // Simple sync - but don't overwrite store messages if chat has no messages
-  // This preserves server-side messages during hydration
+  // Simple sync - merge messages to avoid overwriting existing history
   useEffect(() => {
     const currentStoreState = (store as any).getState?.() || { messages: [] };
+    const storeMessages = currentStoreState.messages ?? [];
+    const chatMessages = chatHelpers.messages ?? [];
 
-    // Skip syncing messages if store has messages but chat doesn't
-    // This prevents clearing server-side messages on hydration
-    const shouldSyncMessages = !(
-      currentStoreState.messages?.length > 0 &&
-      chatHelpers.messages.length === 0
-    );
+    let nextMessages = chatMessages as any;
+    if (storeMessages.length > 0) {
+      if (chatMessages.length === 0) {
+        nextMessages = storeMessages;
+      } else if (chatMessages.length < storeMessages.length) {
+        nextMessages = mergeMessages(storeMessages, chatMessages);
+      }
+    }
 
     // Only sync state data
     const stateData: any = {
       id: chatHelpers.id,
       error: chatHelpers.error,
       status: chatHelpers.status,
+      messages: nextMessages,
     };
-
-    // Only add messages to sync object if we should sync them
-    if (shouldSyncMessages) {
-      stateData.messages = chatHelpers.messages;
-    }
 
     // Sync functions separately and only once
     const functionsData = {
