@@ -28,7 +28,8 @@
     "dev": "tsup --watch",
     "clean": "rm -rf dist",
     "prepublishOnly": "bun run build",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "prepare": "tsup"
   },
   "keywords": [
     "ai",
